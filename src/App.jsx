@@ -1,5 +1,5 @@
 import React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Heading from './components/Heading'
 import ButtonStyle from './components/ButtonStyle'
 import Tasks from './components/Tasks'
@@ -19,6 +19,9 @@ const App = () => {
     taskElement.innerText=`${task}`;
     tasks.append(taskElement);
     settask('');
+    
+    // Save tasks to localStorage
+    saveTasksToStorage();
   }
   let taskElements=document.querySelectorAll("#task-element");
   taskElements.forEach(element => {
@@ -29,6 +32,7 @@ const App = () => {
         if(strikeproperty==='rgb(0, 0, 0)')
         {
           element.remove();
+          saveTasksToStorage();
           let taskArray = Array.from(document.querySelectorAll("#task-element"));
           if(taskArray.length==[])
           {
@@ -40,6 +44,7 @@ const App = () => {
           element.classList.add("bg-black");
           element.classList.add("text-white");
           element.classList.add("line-through");
+          saveTasksToStorage();
         }
       };
     });
@@ -53,6 +58,65 @@ const App = () => {
         return;
       }
     }
+    const saveTasks = (tasks) => localStorage.setItem('todoTasks', JSON.stringify(tasks))
+    const loadTasks = () => JSON.parse(localStorage.getItem('todoTasks') || '[]')
+    
+    // Save current tasks to localStorage
+    const saveTasksToStorage = () => {
+      const taskElements = document.querySelectorAll("#task-element");
+      const tasksArray = Array.from(taskElements).map(element => ({
+        text: element.innerText,
+        completed: element.classList.contains('bg-black')
+      }));
+      saveTasks(tasksArray);
+    };
+    
+    // Load tasks from localStorage on component mount
+    useEffect(() => {
+      const savedTasks = loadTasks();
+      const tasksContainer = document.querySelector("#tasks");
+      
+      if (tasksContainer) {
+        // Clear any existing tasks first to prevent duplicates
+        tasksContainer.innerHTML = '';
+        
+        if (savedTasks.length > 0) {
+          tasksContainer.style.display = "flex";
+          savedTasks.forEach(savedTask => {
+            let taskElement = document.createElement("div");
+            taskElement.id = "task-element";
+            taskElement.className = savedTask.completed 
+              ? "lg:text-xl md:text-md text-sm bg-black text-white px-4 py-2 rounded-xl border-2 border-black whitespace-normal break-words active:scale-95 shadow-xl active:shadow-lg cursor-pointer font-bold line-through"
+              : "lg:text-xl md:text-md text-sm bg-white px-4 py-2 rounded-xl border-2 border-black whitespace-normal break-words active:scale-95 shadow-xl active:shadow-lg cursor-pointer font-bold";
+            taskElement.innerText = savedTask.text;
+            tasksContainer.append(taskElement);
+            
+            // Add click event to loaded task
+            taskElement.onclick = (e) => {
+              let strike = window.getComputedStyle(taskElement);
+              let strikeproperty = strike.getPropertyValue('background-color');
+              if (strikeproperty === 'rgb(0, 0, 0)') {
+                taskElement.remove();
+                saveTasksToStorage();
+                let taskArray = Array.from(document.querySelectorAll("#task-element"));
+                if (taskArray.length === 0) {
+                  tasksContainer.style.display = "none";
+                }
+              } else {
+                taskElement.classList.remove("bg-white");
+                taskElement.classList.add("bg-black");
+                taskElement.classList.add("text-white");
+                taskElement.classList.add("line-through");
+                saveTasksToStorage();
+              }
+            };
+          });
+        } else {
+          // If no saved tasks, hide the tasks container
+          tasksContainer.style.display = "none";
+        }
+      }
+    }, []);
   return (
     <>
     <div className="flex flex-col justify-center gap-6 px-6 py-8 lg:w-2/5 md:w-4/5 w-9/10 border-2 shadow-2xl rounded-2xl h-max">
